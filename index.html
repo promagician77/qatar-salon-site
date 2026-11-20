@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Salon WhatsApp assistant in Arabic and English: a working demo</title>
+<meta name="description" content="A WhatsApp assistant for a Doha salon, built for WhatsApp Cloud API, n8n and OpenAI. Try it in Gulf Arabic, Arabizi or English.">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preload" href="fonts/readex-pro-latin-400.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/alexandria-latin-700.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="wrap bar">
+  <p class="name">Salon assistant <span>for WhatsApp Cloud API, n8n and OpenAI</span></p>
+  <a href="downloads/salon-whatsapp-assistant.json" download>Download the n8n workflow</a>
+</header>
+<main id="main">
+  <div class="wrap hero">
+    <div class="hero-head">
+      <div class="titles">
+        <h1>Message the salon like a customer in Doha.</h1>
+        <p class="h1-ar" lang="ar" dir="rtl">بالعربي أو بالإنجليزي، الرد جاهز.</p>
+      </div>
+      <p class="lede">This assistant answers for an invented ladies’ salon in West Bay. Prices, opening hours and free times come from the salon’s own data, so they can’t be made up; only questions the data doesn’t cover go to OpenAI. The page runs the same code as the n8n workflow and shows the exact request each reply would send.</p>
+    </div>
+
+    <div class="stage">
+      <div class="starts">
+        <h2 id="starts-h">Start a conversation</h2>
+        <ul aria-labelledby="starts-h">
+          <li><button type="button" class="start" data-script="ar-book" aria-pressed="false"><span class="say" dir="auto">ابي احجز بديكير باجر الساعة ٥ العصر</span><span class="what">Booking in Gulf Arabic</span></button></li>
+          <li><button type="button" class="start" data-script="ar-price" aria-pressed="false"><span class="say" dir="auto">كم سعر الكيراتين؟</span><span class="what">Price, then book from the reply</span></button></li>
+          <li><button type="button" class="start" data-script="en-menu" aria-pressed="false"><span class="say" dir="auto">Hi</span><span class="what">Book from the menu</span></button></li>
+          <li><button type="button" class="start" data-script="en-hours" aria-pressed="false"><span class="say" dir="auto">Are you open on Friday morning?</span><span class="what">Friday hours</span></button></li>
+          <li><button type="button" class="start" data-script="arabizi" aria-pressed="false"><span class="say" dir="auto">salam, wain mawqe3kom?</span><span class="what">Arabizi, then a booking</span></button></li>
+          <li><button type="button" class="start" data-script="openai" aria-pressed="false"><span class="say" dir="auto">Do you do bridal makeup for a wedding party of 6?</span><span class="what">Not in the data: goes to OpenAI</span></button></li>
+          <li><button type="button" class="start" data-script="voice" aria-pressed="false"><span class="say" dir="auto">Voice note</span><span class="what">Handed to the front desk</span></button></li>
+        </ul>
+        <button type="button" class="reset" id="reset">Clear the chat</button>
+        <p class="aside">The clock is Doha time, so the free times are real for today. Nothing is sent: no WhatsApp number or OpenAI key is connected to this page.</p>
+      </div>
+
+      <div class="phone">
+        <div class="screen">
+          <div class="chat-head">
+            <span class="avatar" aria-hidden="true">SW</span>
+            <div><div class="who">Sample Salon, West Bay</div><div class="sub">Doha <span id="doha"></span>, replies in Arabic and English</div></div>
+          </div>
+          <div class="log" id="log" role="log" aria-live="polite" aria-label="Chat with the salon" tabindex="0"><noscript><p class="empty">The chat runs in your browser and needs JavaScript.</p></noscript></div>
+          <form class="compose" id="compose">
+            <label class="sr" for="say">Message the salon</label>
+            <input id="say" type="text" dir="auto" autocomplete="off" placeholder="اكتبي رسالتك / Type a message">
+            <button type="submit">Send</button>
+          </form>
+        </div>
+      </div>
+
+      <div class="inspector" aria-labelledby="ins-h">
+        <h2 id="ins-h">What the workflow does with the last message</h2>
+        <dl class="facts" id="facts"></dl>
+        <p class="payload-h" id="payload-h"></p>
+        <pre id="payload" tabindex="0" aria-labelledby="payload-h"></pre>
+        <p class="counts"><span>WhatsApp messages: <b id="n-wa">0</b></span><span>OpenAI requests: <b id="n-ai">0</b></span><span>Bookings: <b id="n-book">0</b></span></p>
+      </div>
+    </div>
+  </div>
+
+  <section class="part" aria-labelledby="flow-h">
+    <div class="wrap cols">
+      <div>
+        <h2 id="flow-h">The same code runs inside n8n</h2>
+        <p class="intro">The workflow file carries this page’s code in its Code nodes. Each customer message takes this path:</p>
+        <ol class="flow">
+          <li><span class="node">WhatsApp events <code>Webhook, POST</code></span><p>Answers Meta with 200 straight away, so Meta doesn’t retry while the reply is being worked out.</p></li>
+          <li><span class="node">Verify, parse, dedupe <code>Code</code></span><p>Checks Meta’s signature on the raw body, drops delivery receipts, and drops a message id it has already answered.</p></li>
+          <li><span class="node">Answer <code>Code</code></span><p>Reads the language, intent, service, day and time, then builds the reply from the salon’s data.</p></li>
+          <li><span class="node">Route <code>Switch</code></span>
+            <div class="branch">
+              <div><span class="route" data-route="data">Salon data or front desk</span><br>Reply is ready; go straight to sending.</div>
+              <div><span class="route" data-route="openai">OpenAI</span><br>Chat completion with the salon’s facts and a JSON reply format; any price in the answer is checked against the price list.</div>
+            </div></li>
+          <li><span class="node">Send via WhatsApp <code>HTTP Request</code></span><p>One POST per message to the Cloud API.</p></li>
+        </ol>
+        <p class="small">Also in the file: the verification handshake Meta makes when you register the webhook, and a schedule that sends day-before reminders every 15 minutes.</p>
+      </div>
+      <div>
+        <a class="download" href="downloads/salon-whatsapp-assistant.json" download>Download the workflow (13 nodes)</a>
+        <h3>To run it</h3>
+        <ol class="setup">
+          <li>Import the file into n8n. The POST webhook keeps the raw body, which the signature check needs.</li>
+          <li>Add two header credentials: the WhatsApp access token and the OpenAI key, both as <code>Authorization: Bearer …</code>.</li>
+          <li>Set <code>WA_VERIFY_TOKEN</code>, <code>WA_APP_SECRET</code> and <code>OPENAI_MODEL</code> as n8n Variables, or as environment variables with <code>N8N_BLOCK_ENV_ACCESS_IN_NODE=false</code> (n8n 2.x blocks them in Code nodes by default).</li>
+          <li>Create and get approval for an <code>appointment_reminder</code> template in English and Arabic.</li>
+        </ol>
+        <h3>How it was checked</h3>
+        <p>n8n itself was not run for this demo. A harness that imitates the n8n parts the file uses (Code nodes, expressions, the Switch, HTTP requests, workflow static data, and Code nodes that can’t read environment variables, as in n8n 2.x) ran the file with WhatsApp and OpenAI mocked. For all 139 test messages it produced the same request bodies as calling the code directly.</p>
+        <p class="small">29 of 29 tests pass; 24 of 24 planted bugs are caught by them.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="part" aria-labelledby="ar-h">
+    <div class="wrap">
+      <h2 id="ar-h">Arabic the way customers type it</h2>
+      <p class="intro">Customers in Qatar write Gulf Arabic, standard Arabic, Arabizi and English, often mixed, with or without hamza and with either kind of digits. The text is normalized before any matching, and the reply goes back in the language the customer wrote in. Today is taken as Thursday 19 November.</p>
+      <div class="table-wrap" tabindex="0" role="region" aria-label="Examples of customer messages">
+        <table>
+          <thead><tr><th scope="col">Customer typed</th><th scope="col">What it tests</th><th scope="col">Reply in</th><th scope="col">Understood</th></tr></thead>
+          <tbody>
+<tr><td dir="rtl" lang="ar">أبي أحجز سشوار اليوم ٧ المسا</td><td class="small">Hamza on the alef, Arabic-Indic ٧, “evening” after the hour</td><td>Arabic</td><td>book, blow-dry, Thursday, 19:00</td></tr>
+<tr><td dir="rtl" lang="ar">ابي احجز بديكير باچر الساعة ٥ العصر</td><td class="small">Gulf باچر (tomorrow) written with چ</td><td>Arabic</td><td>book, pedicure, Friday, 17:00</td></tr>
+<tr><td dir="rtl" lang="ar">في الجمعه تفتحون الساعة كم</td><td class="small">كم here asks “what time”, not “how much”</td><td>Arabic</td><td>opening hours, Friday</td></tr>
+<tr><td dir="ltr" lang="en">kam se3r el pedicure?</td><td class="small">Arabizi: Latin letters, 3 for ع</td><td>Arabic</td><td>price, pedicure</td></tr>
+<tr><td dir="rtl" lang="ar">كم سعر gel nails</td><td class="small">Arabic with English service words</td><td>Arabic</td><td>price, gel nails</td></tr>
+<tr><td dir="ltr" lang="en">Book me in for hair colour on Saturday at 11am</td><td class="small">English</td><td>English</td><td>book, hair colour, Saturday, 11:00</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="scores">
+        <div class="score"><div class="big">106<small> of 109</small></div><p>Test set messages whose intent was read right (99 without normalization). Reply language right for 109 of 109.</p></div>
+        <div class="score"><div class="big">54<small> of 55</small></div><p>Arabic-script messages in the test set: 47 of 55 without normalization. Arabizi 9 of 9, English 41 of 43.</p></div>
+        <div class="score"><div class="big">28<small> of 30</small></div><p>Held-out messages, written after the rules were frozen; 25 of 30 without normalization. Reply language right for 30 of 30.</p></div>
+      </div>
+      <p class="small">The test set was written alongside the rules, so it flatters them. No rule was changed after the held-out set was scored. Both sets were written for this demo, not taken from real customers. The two held-out misses:</p>
+      <ul class="misses">
+        <li>“<bdi lang="ar">ابي اعدل موعدي لبعد بكرة</bdi>” was read as <em>book</em> instead of <em>change or cancel</em>. It would offer new times without freeing the old booking. A change request needs its own path.</li>
+        <li>“<bdi lang="en">Are you open during Eid?</bdi>” was read as <em>opening hours</em> instead of <em>not covered</em>. It would quote normal hours. A real salon needs a table of holiday hours.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="part" aria-labelledby="wa-h">
+    <div class="wrap">
+      <h2 id="wa-h">WhatsApp’s rules, handled in code</h2>
+      <p class="intro">These are the places a WhatsApp assistant usually breaks after launch. Each is handled in the code and checked by the tests.</p>
+      <div class="rules">
+        <div class="rule">
+          <h3>The 24-hour window decides how a reminder can be sent</h3>
+          <p>A normal message is only allowed within 24 hours of the customer’s last message. After that it has to be a template Meta has approved. So a day-before reminder depends on how far ahead the booking was made:</p>
+          <div class="table-wrap" tabindex="0" role="region" aria-label="Reminder rule"><table>
+            <thead><tr><th scope="col">Booked this far ahead</th><th scope="col">Day-before reminder</th></tr></thead>
+            <tbody>
+              <tr><td>Less than 24 hours</td><td>None, and the confirmation doesn’t promise one</td></tr>
+              <tr><td>24 to 48 hours</td><td>Normal message</td></tr>
+              <tr><td>48 hours or more</td><td>Approved template, unless the customer has written since</td></tr>
+            </tbody></table></div>
+          <p class="measured">Of 168 booking lead times checked hour by hour up to a week, a plain day-before message would land outside the window for 121, if the customer doesn’t write again. The workflow sends those as the template.</p>
+        </div>
+        <div class="rule">
+          <h3>Retries, fake posts and receipts get no reply</h3>
+          <p>Meta retries notifications, and retries can arrive twice. Anyone who finds the webhook URL can post to it. Every message sent also comes back as sent, delivered and read receipts.</p>
+          <p class="measured">In a simulated stream of 120 messages from 40 customers, with 7 injected retries, 10 forged posts and 360 receipts, the workflow sent 120 replies: one per message. A handler without the signature and duplicate checks sent 137.</p>
+        </div>
+        <div class="rule">
+          <h3>Every reply fits WhatsApp’s limits</h3>
+          <p>Reply buttons: at most 3, titles up to 20 characters. Lists: at most 10 rows, titles up to 24. Text: up to 4,096 characters. Arabic labels count too, so slot buttons read <bdi lang="ar" dir="rtl">الجمعة 20/11 17:00</bdi>.</p>
+          <p class="measured">139 payloads from the test messages and scripted conversations: 0 over a limit. The longest button title is 18 characters.</p>
+        </div>
+        <div class="rule">
+          <h3>One message per reply, because replies now cost money</h3>
+          <p>Since 1 October 2026 Meta charges for each service message, the replies sent inside the 24-hour window, after a monthly free allowance. So each answer is built as a single message: a price comes with its booking buttons rather than as two messages.</p>
+          <p class="measured">125 of the 125 test messages answered without OpenAI got exactly one message back. 14 of 139 needed OpenAI.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="part" aria-labelledby="led-h">
+    <div class="wrap">
+      <h2 id="led-h">What was measured, and what wasn’t</h2>
+      <div class="ledger">
+        <div>
+          <h3>Measured</h3>
+          <ul>
+            <li>Intent: 106 of 109 on the test set, 28 of 30 on the held-out set. Reply language: 109 of 109 and 30 of 30.</li>
+            <li>The workflow file, run in the harness, matched direct calls on 139 of 139 messages; a forged post, a retry and a receipt each got no reply.</li>
+            <li>A booking made three days ahead got its reminder once, as the approved template, when the 15-minute schedule reached it.</li>
+            <li>The price check passed 10 of 10 written replies with real prices and stopped 10 of 10 with invented ones.</li>
+            <li>29 of 29 tests pass; 24 of 24 planted bugs are caught by them.</li>
+            <li>Rules, booking and payload building take 0.22 ms per message (median of 4,170 runs, no network).</li>
+          </ul>
+        </div>
+        <div>
+          <h3>Not measured</h3>
+          <ul>
+            <li>No OpenAI call was made, so answer quality for questions outside the data is untested.</li>
+            <li>No real WhatsApp number: nothing was delivered, and the reminder template isn’t approved.</li>
+            <li>n8n itself wasn’t run; the harness imitates the parts the workflow uses.</li>
+            <li>The salon, prices, staff and all test messages are invented.</li>
+            <li>Voice notes and photos go to the front desk; nothing is transcribed.</li>
+            <li>Bookings live in n8n’s workflow storage, which suits a demo, not a busy salon.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+<footer class="wrap"><span>Prepared by Santiago</span><span>Sample salon, prices and messages are invented for this demo.</span></footer>
+<script type="application/json" id="scripts">{"note":"Scripted customer conversations used by the demo page's quick starts and by tools/measure.mjs. Written for the demo, not real customers. tap = which button or list row the customer taps (0 = first).","scripts":[{"id":"ar-book","title":"Book in Gulf Arabic","titleAr":"حجز باللهجة","steps":[{"say":"ابي احجز بديكير باجر الساعة ٥ العصر"},{"tap":0}]},{"id":"ar-price","title":"Ask a price, then book","titleAr":"سؤال عن السعر","steps":[{"say":"كم سعر الكيراتين؟"},{"tap":0},{"tap":1}]},{"id":"en-menu","title":"Book from the menu","titleAr":"الحجز من القائمة","steps":[{"say":"Hi"},{"tap":1},{"tap":6},{"tap":0}]},{"id":"en-hours","title":"Friday hours","titleAr":"دوام الجمعة","steps":[{"say":"Are you open on Friday morning?"}]},{"id":"arabizi","title":"Arabizi","titleAr":"عربيزي","steps":[{"say":"salam, wain mawqe3kom?"},{"say":"ab8a a7jz manicure bukra 7pm"},{"tap":0}]},{"id":"openai","title":"A question the data can't answer","titleAr":"سؤال خارج البيانات","steps":[{"say":"Do you do bridal makeup for a wedding party of 6?"}]},{"id":"voice","title":"Voice note","titleAr":"رسالة صوتية","steps":[{"voice":true}]}]}</script>
+<script type="module" src="app.js"></script>
+</body>
+</html>
